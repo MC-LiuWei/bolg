@@ -1,60 +1,59 @@
-# This is a basic workflow to help you get started with Actions
-
 name: deploy
 
-# Controls when the action will run. 
 on:
-  # Triggers the workflow on push or pull request events but only for the main branch
   push:
-    branches: [ main ]
-
-  # Allows you to run this workflow manually from the Actions tab
+    branches: [main]
   workflow_dispatch:
 
-# A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
   # This workflow contains a single job called "build"
   build:
-
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v2
+      - uses: actions/checkout@v2
 
-    - name: Cache node modules
-      uses: actions/cache@v2
-      env:
-        cache-name: cache-node-modules
-      with:
-        path: ~/.npm
-        key: ${{runner.os}}-build-${{env.cache-name}}-${{ hashFiles('**/package-lock.json') }}
-        restore-keys: |
-          ${{ runner.os }}-build-${{ env.cache-name }}-
-          ${{ runner.os }}-build-
-          ${{ runner.os }}-
+      - name: Cache node modules
+        uses: actions/cache@v2
+        env:
+          cache-name: cache-node-modules
+        with:
+          path: ~/.npm
+          key: ${{runner.os}}-build-${{env.cache-name}}-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-build-${{ env.cache-name }}-
+            ${{ runner.os }}-build-
+            ${{ runner.os }}-
 
-    - name: 安装依赖
-      run: npm install
+      - name: 安装依赖
+        run: npm install
 
-    - name: 打包
-      run: npm run build
+      - name: 打包
+        run: npm run build
 
   deploy:
-    if: github.ref == 'refs/heads/main'
-    needs: build
-    runs-on: ubuntu-latest
-    steps:
-    - name: 配置 Git 环境
+    - uses: actions/checkout@v1
+    - uses: actions/setup-node@v1
+      with:
+        node-version: "12.x"
+    - name: Add key to allow access to repository
       env:
-        ACTION_DEPLOY_KEY: ${{secrets.deploy}}
+        SSH_AUTH_SOCK: /tmp/ssh_agent.sock
       run: |
-          mkdir -p ~/.ssh/
-          echo "$ACTION_DEPLOY_KEY" > ~/.ssh/id_rsa
-          chmod 600 ~/.ssh/id_rsa
-          ssh-keyscan github.com >> ~/.ssh/known_hosts
-          git config --global user.name "MC-LiuWei"
-          git config --global user.email "lemonpaimc@126.com"
-    - name: 部署博客
+        mkdir -p ~/.ssh
+        ssh-keyscan github.com >> ~/.ssh/known_hosts
+        echo "${{ secrets.deploy }}" > ~/.ssh/id_rsa
+        chmod 600 ~/.ssh/id_rsa
+        cat <<EOT >> ~/.ssh/config
+        Host github.com
+        HostName github.com
+        IdentityFile ~/.ssh/id_rsa
+        EOT
+    - name: Release to GitHub Pages
+      env:
+        USE_SSH: true
+        GIT_USER: git
       run: |
-          npm run deploy
-          rm ~/.ssh/id_rsa
+        git config --global user.email "lemonpaimc@126.com"
+        git config --global user.name "MC-LiuWei"
+        npm run deploy
