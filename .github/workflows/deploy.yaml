@@ -44,5 +44,8 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     steps:
+    - uses: actions/github@v1.0.0
+      env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     - name: deploy
       run: npm run deploy
