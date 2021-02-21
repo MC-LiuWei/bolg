@@ -33,10 +33,10 @@ jobs:
           ${{ runner.os }}-build-
           ${{ runner.os }}-
 
-    - name: install dependencies
+    - name: 安装依赖
       run: npm install
 
-    - name: docusaurus build
+    - name: 打包
       run: npm run build
 
   deploy:
@@ -44,8 +44,17 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/github@v1.0.0
+    - name: 配置 Git 环境
       env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-    - name: deploy
-      run: npm run deploy
+        ACTION_DEPLOY_KEY: ${{secrets.deploy}}
+      run: |
+          mkdir -p ~/.ssh/
+          echo "$ACTION_DEPLOY_KEY" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan github.com >> ~/.ssh/known_hosts
+          git config --global user.name "MC-LiuWei"
+          git config --global user.email "lemonpaimc@126.com"
+    - name: 部署博客
+      run: |
+          npm run deploy
+          rm ~/.ssh/id_rsa
